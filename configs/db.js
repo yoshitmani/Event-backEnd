@@ -1,49 +1,32 @@
 import mongoose from "mongoose";
 
 const connectDB = async () => {
+  try {
+    let mongodbURI = process.env.MONGODB_URI;
 
-  let mogodbURI = process.env.MONGODB_URI;
-  const projectName = "resume-builder";
-
-  if (!mogodbURI) {
-    console.error("❌ MONGODB_URI environment variable is not set");
-    return;
-  }
-
-  if (mogodbURI.endsWith("/")) {
-    mogodbURI = mogodbURI.slice(0, -1);
-  }
-
-  const DB_URI = `${mogodbURI}/${projectName}`;
-
-  const connect = async () => {
-
-    try {
-
-      await mongoose.connect(DB_URI);
-
-      console.log("✅ Database connected successfully 🔗");
-
-    } catch (error) {
-
-      console.error("❌ MongoDB connection failed. Retrying in 5 seconds...");
-      setTimeout(connect, 5000); // retry after 5 seconds
-
+    if (!mongodbURI) {
+      throw new Error("❌ MONGODB_URI is missing");
     }
 
-  };
+    // Remove trailing slash if exists
+    if (mongodbURI.endsWith("/")) {
+      mongodbURI = mongodbURI.slice(0, -1);
+    }
 
-  mongoose.connection.on("connected", () => {
-    console.log("📦 MongoDB connection established");
-  });
+    const DB_URI = `${mongodbURI}/resume-builder`;
 
-  mongoose.connection.on("disconnected", () => {
-    console.log("⚠️ MongoDB disconnected. Reconnecting...");
-    connect();
-  });
+    // Prevent multiple connections
+    if (mongoose.connections[0].readyState) {
+      console.log("✅ MongoDB already connected");
+      return;
+    }
 
-  connect();
+    await mongoose.connect(DB_URI);
 
+    console.log("✅ MongoDB Connected Successfully");
+  } catch (error) {
+    console.error("❌ MongoDB Connection Error:", error.message);
+  }
 };
 
 export default connectDB;
